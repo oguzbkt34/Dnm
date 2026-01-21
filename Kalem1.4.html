@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Alyans – Katmanlı Önizleme</title>
+<style>
+body{font-family:Arial;background:#f3f4f6;padding:20px}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:20px}
+.panel{background:#fff;padding:15px;border-radius:10px}
+label{display:block;margin-top:8px;font-size:13px}
+input,select,button{width:100%;padding:6px;margin-top:4px}
+button{margin-top:10px;background:#111;color:#fff;border:none;border-radius:6px}
+canvas{border:1px solid #ccc;background:#fff}
+.layer{display:flex;gap:6px;margin-top:4px;font-size:13px}
+.eye{cursor:pointer}
+hr{margin:12px 0}
+</style>
+</head>
+
+<body>
+
+<div class="grid">
+
+<!-- SOL PANEL -->
+<div class="panel">
+
+<b>Ana Desen</b>
+
+<hr>
+
+<label>
+  <input type="checkbox" id="euMode">
+  Avrupa Ölçüsü ile Hesapla
+</label>
+
+<label>Avrupa Ölçüsü (EU)</label>
+<input id="euSize" type="number" value="54" disabled>
+
+<label>Kalınlık (mm)</label>
+<input id="thickness" type="number" step="0.1" value="1.5" disabled>
+
+<div style="font-size:12px;margin-top:6px;color:#374151">
+  İç Çap: <b><span id="innerDia">–</span> mm</b><br>
+  Üst Çap: <b><span id="outerDia">–</span> mm</b>
+</div>
+
+<hr>
+
+<label>Dış Çap (mm)</label>
+<input id="diameter" type="number" value="22">
+
+<label>Ürün Genişliği (mm)</label>
+<input id="widthInp" type="number" value="6">
+
+<label>Desen</label>
+<select id="pattern">
+  <option value="parallel">Paralel</option>
+  <option value="helix">Helis</option>
+  <option value="doubleHelix">Çift Helis</option>
+  <option value="crescent">Ay Kalemi</option>
+</select>
+
+<label><input id="fullTurn" type="checkbox"> Tam Tur</label>
+
+<label>Kalemler Arası Mesafe (mm)</label>
+<input id="spacing" type="number" step="0.1" value="1">
+
+<label>Kalem Adedi</label>
+<input id="count" type="number" value="10">
+
+<label>Kalem Çapı (mm)</label>
+<input id="pen" type="number" value="0.6">
+
+<label>Açı (°)</label>
+<input id="angle" type="number" value="45">
+
+<hr>
+
+<b>Ay Kalemi Bombe</b>
+
+<label>w (mm)</label>
+<input id="cresW" type="number" value="2">
+
+<label>c (mm)</label>
+<input id="cresC" type="number" value="1.2">
+
+<label>h (mm)</label>
+<input id="cresH" type="number" value="0.6">
+
+<button onclick="previewMain()">Önizle</button>
+<button onclick="lockMain()">Kilitle & Ekle</button>
+
+<div id="layers"></div>
+
+<hr>
+
+<b>Serbest Helis</b>
+
+<label>Açı (°)</label>
+<input id="fAngle" type="number" value="30">
+
+<label>Kalem Boyu (mm)</label>
+<input id="fLen" type="number" value="5">
+
+<label>Yatay Ofset (mm)</label>
+<input id="fOffset" type="number" value="0">
+
+<label>Dikey Ofset (mm) (0 = alt kenar)</label>
+<input id="fVOffset" type="number" value="3">
+
+<label>Kalem Çapı (mm)</label>
+<input id="fPen" type="number" value="0.6">
+
+<button onclick="previewFree()">Serbest Helis Önizle</button>
+<button onclick="lockFree()">Kilitle & Ekle</button>
+
+</div>
+
+<!-- SAĞ PANEL -->
+<div class="panel">
+<b>Ana Ekran</b>
+<canvas id="mainCanvas"></canvas>
+<hr>
+<b>Önizleme</b>
+<canvas id="previewCanvas"></canvas>
+</div>
+
+</div>
+
+<script>
+/* ---------- SABİTLER ---------- */
+const mm=20, m=60;
+let idGen=0;
+const layersArr=[];
+
+/* ---------- DOM ---------- */
+const dInp=diameter, wInp=widthInp, pat=pattern, ft=fullTurn;
+const sp=spacing, ct=count, penInp=pen, ang=angle;
+const cresWInp=cresW, cresCInp=cresC, cresHInp=cresH;
+const mainC=mainCanvas, prevC=previewCanvas, layersDiv=layers;
+
+/* ---------- HESAPLAR ---------- */
+const circ=()=>Math.PI*Number(dInp.value);
+const visible=()=>circ()*0.35;
+
+/* ---------- TAM TUR – SERBEST SENKRON ---------- */
+
+let lastEdited = "spacing"; // varsayılan
+
+sp.oninput = () => {
+  lastEdited = "spacing";
+  syncValues();
+};
+
+ct.oninput = () => {
+  lastEdited = "count";
+  syncValues();
+};
+
+ft.onchange = () => {
+  syncValues();
+};
+
+function syncValues(){
+  const C = circ();
+
+  if(lastEdited === "spacing"){
+    const s = Math.max(0.01, Number(sp.value));
+    ct.value = Math.max(1, Math.round(C / s));
+  }else{
+    const c = Math.max(1, Number(ct.value));
+    sp.value = (C / c).toFixed(2);
+  }
+}
+
+/* ---------- CANVAS ---------- */
+function setup(c){
+  c.width=visible()*mm+2*m;
+  c.height=Number(wInp.value)*mm+2*m;
+}
+
+/* ---------- KILAVUZ ---------- */
+function drawGuides(ctx){
+  const wMM=visible(), hMM=Number(wInp.value);
+  const wPX=wMM*mm, hPX=hMM*mm;
+
+  ctx.save();
+  ctx.font="10px Arial";
+  ctx.fillStyle="#374151";
+
+  for(let i=0;i<=hMM;i++){
+    const y=m+hPX-i*mm;
+    ctx.strokeStyle=i%5===0?"#9ca3af":"#e5e7eb";
+    ctx.beginPath();ctx.moveTo(m,y);ctx.lineTo(m+wPX,y);ctx.stroke();
+    if(i%5===0) ctx.fillText(i+" mm",m-35,y);
+  }
+
+  for(let i=0;i<=wMM;i++){
+    const x=m+i*mm;
+    ctx.strokeStyle=i%5===0?"#9ca3af":"#e5e7eb";
+    ctx.beginPath();ctx.moveTo(x,m);ctx.lineTo(x,m+hPX);ctx.stroke();
+    if(i%5===0 && x<m+wPX-10) ctx.fillText(i+" mm",x,m+hPX+12);
+  }
+
+  const cy=m+hPX/2;
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle="#6b7280";
+  ctx.beginPath();ctx.moveTo(m,cy);ctx.lineTo(m+wPX,cy);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillText("ORTA "+(hMM/2)+" mm",m+wPX+6,cy);
+  ctx.restore();
+}
+
+/* ---------- ANA DESEN ÇİZ ---------- */
+function drawLayer(ctx,l){
+  if(!l.visible) return;
+  ctx.lineWidth=l.pen*mm;
+  const h=Number(wInp.value)*mm/2;
+  const cy=m+h;
+
+  if(l.type==="crescent"){
+    const c=l.c, hB=l.h;
+    const R=(c*c)/(8*hB)+hB/2;
+    const a=Math.acos((R-hB)/R);
+    ctx.save();
+    ctx.translate(m+l.w*mm/2,cy);
+    ctx.rotate(l.angle);
+    ctx.beginPath();
+    ctx.arc(0,(R-hB)*mm,R*mm,Math.PI+a,2*Math.PI-a);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  const dx=h/Math.tan(l.angle);
+
+  for(let x=0;x<visible();x+=l.spacing){
+    const px=m+x*mm;
+    ctx.beginPath();
+    if(l.type==="parallel"){
+      ctx.moveTo(px,m);ctx.lineTo(px,m+h*2);
+    }else{
+      ctx.moveTo(px-dx,cy+h);ctx.lineTo(px+dx,cy-h);
+      if(l.type==="doubleHelix"){
+        ctx.moveTo(px-dx,cy-h);ctx.lineTo(px+dx,cy+h);
+      }
+    }
+    ctx.stroke();
+    if(!l.full) break;
+  }
+}
+
+/* ---------- SERBEST HELİS ---------- */
+function drawFree(ctx,f){
+  if(!f.visible) return;
+  ctx.lineWidth=f.pen*mm;
+
+  const hPX=Number(wInp.value)*mm;
+  const cx=m+f.x*mm;
+  const cy=m+hPX-f.y*mm;
+  const L=f.len*mm;
+
+  const dx=(L/2)*Math.cos(f.angle);
+  const dy=(L/2)*Math.sin(f.angle);
+
+  ctx.beginPath();
+  ctx.moveTo(cx-dx,cy+dy);
+  ctx.lineTo(cx+dx,cy-dy);
+  ctx.stroke();
+}
+
+/* ---------- ÖNİZLE ---------- */
+function previewMain(){
+  const ctx=prevC.getContext("2d");
+  setup(prevC);
+  ctx.clearRect(0,0,prevC.width,prevC.height);
+  drawGuides(ctx);
+  drawLayer(ctx,collectMain());
+}
+
+function previewFree(){
+  previewMain();
+  const ctx=prevC.getContext("2d");
+  drawFree(ctx,{
+    visible:true,
+    pen:Number(fPen.value),
+    angle:Number(fAngle.value)*Math.PI/180,
+    len:Number(fLen.value),
+    x:Number(fOffset.value),
+    y:Number(fVOffset.value)
+  });
+}
+
+/* ---------- KİLİTLE ---------- */
+function collectMain(){
+  return{
+    id:idGen,
+    visible:true,
+    type:pat.value,
+    pen:Number(penInp.value),
+    angle:Number(ang.value)*Math.PI/180,
+    spacing:Number(sp.value),
+    full:ft.checked,
+    w:Number(cresWInp.value),
+    c:Number(cresCInp.value),
+    h:Number(cresHInp.value)
+  };
+}
+
+function lockMain(){
+  const l=collectMain();
+  l.id=idGen++;
+  layersArr.push(l);
+  addLayerUI(l);
+  redraw();
+}
+
+function lockFree(){
+  const f={
+    id:idGen++,
+    visible:true,
+    custom:true,
+    pen:Number(fPen.value),
+    angle:Number(fAngle.value)*Math.PI/180,
+    len:Number(fLen.value),
+    x:Number(fOffset.value),
+    y:Number(fVOffset.value)
+  };
+  layersArr.push(f);
+  addLayerUI(f);
+  redraw();
+}
+
+/* ---------- ANA REDRAW ---------- */
+function redraw(){
+  const ctx=mainC.getContext("2d");
+  setup(mainC);
+  ctx.clearRect(0,0,mainC.width,mainC.height);
+  drawGuides(ctx);
+  layersArr.forEach(l=>{
+    if(l.custom) drawFree(ctx,l);
+    else drawLayer(ctx,l);
+  });
+}
+
+/* ---------- LAYER UI ---------- */
+function addLayerUI(l){
+  const d=document.createElement("div");
+  d.className="layer";
+  d.id="layer_"+l.id;
+  d.innerHTML=`<span class="eye" onclick="toggle(${l.id})">👁</span> Katman ${l.id}`;
+  layersDiv.appendChild(d);
+}
+function toggle(id){
+  const l=layersArr.find(x=>x.id===id);
+  l.visible=!l.visible;
+  redraw();
+}
+
+/* ---------- BAŞLAT ---------- */
+
+previewMain();
+
+/* ---------- EU MODE ---------- */
+const euMode = document.getElementById("euMode");
+const euSize = document.getElementById("euSize");
+const thicknessInp = document.getElementById("thickness");
+const innerDiaTxt = document.getElementById("innerDia");
+const outerDiaTxt = document.getElementById("outerDia");
+
+function updateFromEU(){
+  if(!euMode.checked) return;
+
+  const eu = Number(euSize.value);
+  const t  = Number(thicknessInp.value);
+  if(eu <= 0 || t < 0) return;
+
+  const inner = eu / Math.PI;
+  const outer = inner + (2 * t);
+
+  dInp.value = outer.toFixed(2);
+
+  innerDiaTxt.textContent = inner.toFixed(2);
+  outerDiaTxt.textContent = outer.toFixed(2);
+
+  previewMain();
+  redrawMain();
+}
+
+euMode.onchange = () => {
+  const active = euMode.checked;
+  euSize.disabled = !active;
+  thicknessInp.disabled = !active;
+
+  if(active){
+    updateFromEU();
+  }else{
+    innerDiaTxt.textContent = "–";
+    outerDiaTxt.textContent = "–";
+  }
+};
+
+euSize.oninput = updateFromEU;
+thicknessInp.oninput = updateFromEU;
+
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Alyans Gram Hesaplama – Radiüs Mantığı</title>
+<style>
+body{font-family:Arial;background:#f2f2f2;padding:16px}
+.box{background:#fff;padding:12px;margin-bottom:12px;border-radius:8px}
+label{font-weight:bold;font-size:14px}
+input,select{width:100%;padding:6px;margin-top:4px;margin-bottom:8px}
+button{width:100%;padding:10px;font-size:16px}
+.ok{color:#0a7a0a;font-weight:bold}
+.err{color:#b00020;font-weight:bold}
+.small{font-size:13px;color:#555}
+</style>
+</head>
+<body>
+
+<h2>Alyans Gram Hesaplama (Yeni Modül)</h2>
+
+<div class="box">
+<label>EU Boy</label>
+<input id="eu" type="number" step="0.1">
+
+<label>Genişlik W (mm)</label>
+<input id="w" type="number" step="0.01">
+
+<label>Kalınlık T (mm)</label>
+<input id="t" type="number" step="0.01">
+
+<label>İç Radiüs (İR)</label>
+<input id="ir" type="number" step="0.01">
+
+<label>Üst Radiüs (OR)</label>
+<input id="or" type="number" step="0.01">
+
+<label>Metal</label>
+<select id="metal">
+<option value="10.49">Gümüş</option>
+<option value="8.4">Sarı Maden (Pirinç)</option>
+<option value="16.6">Tantal</option>
+<option value="10.9">Altın 8K</option>
+<option value="11.3">Altın 9K</option>
+<option value="11.6">Altın 10K</option>
+<option value="13.1">Altın 14K</option>
+<option value="15.6">Altın 18K</option>
+<option value="17.8">Altın 21K</option>
+<option value="18.4">Altın 22K</option>
+<option value="16.4">Platin 600</option>
+<option value="21.45">Platin 950</option>
+<option value="10.5">Paladyum 600</option>
+<option value="12.0">Paladyum 950</option>
+</select>
+
+<label>
+<input type="checkbox" id="quick">
+ Hızlı kontrol (Bombe × 1/4)
+</label>
+</div>
+
+<button onclick="hesapla()">HESAPLA</button>
+
+<div id="sonuc" class="box"></div>
+
+<script>
+function hFromR(R,w){
+  if(R<=0) return 0;
+  return R - Math.sqrt(R*R - (w/2)*(w/2));
+}
+
+function segmentArea(R,h,w){
+  if(R<=0 || h<=0) return 0;
+  return R*R*Math.acos((R-h)/R) - (R-h)*Math.sqrt(2*R*h - h*h);
+}
+
+function hesapla(){
+  const eu = +euEl.value;
+  const w  = +wEl.value;
+  const t  = +tEl.value;
+  const ir = +irEl.value;
+  const or = +orEl.value;
+  const density = +metalEl.value;
+  const quick = quickEl.checked;
+
+  const err=[];
+  if(!(eu>0 && w>0 && t>0)) err.push("Girişler geçersiz");
+
+  const innerDiameter = eu / Math.PI;
+  const circumference = Math.PI * innerDiameter;
+
+  const h_in  = hFromR(ir,w);
+  const h_out = hFromR(or,w);
+
+  const yan = t - (h_in + h_out);
+  if(yan < 0) err.push("Yan et negatif");
+
+  if(err.length){
+    sonuc.innerHTML = `<div class="err">⛔ ${err.join("<br>")}</div>`;
+    return;
+  }
+
+  // Düz gram
+  const areaRect = w * t;
+  const volRect = areaRect * circumference;
+  const gramRect = (volRect/1000) * density;
+
+  // Gerçek gram (segment)
+  const areaNet = areaRect
+    - segmentArea(or,h_out,w)
+    - segmentArea(ir,h_in,w);
+
+  const volNet = areaNet * circumference;
+  const gramNet = (volNet/1000) * density;
+
+  // Hızlı kontrol
+  let gramQuick = null;
+  if(quick){
+    const bombeRatio = (h_in + h_out) / t;
+    gramQuick = gramRect * (1 - 0.25 * bombeRatio);
+  }
+
+  sonuc.innerHTML =
+    `<div class="ok">✔ Hesaplandı</div>`+
+    `İç çap: ${innerDiameter.toFixed(2)} mm<br>`+
+    `Üst h: ${h_out.toFixed(3)} mm | İç h: ${h_in.toFixed(3)} mm<br>`+
+    `Yan et: ${yan.toFixed(3)} mm<br><br>`+
+    `<b>Ana Gram (Gerçek): ${gramNet.toFixed(2)} g</b><br>`+
+    (quick ? `<span class="small">Hızlı kontrol: ${gramQuick.toFixed(2)} g</span>` : ``);
+}
+
+const euEl = document.getElementById("eu");
+const wEl  = document.getElementById("w");
+const tEl  = document.getElementById("t");
+const irEl = document.getElementById("ir");
+const orEl = document.getElementById("or");
+const metalEl = document.getElementById("metal");
+const quickEl = document.getElementById("quick");
+const sonuc = document.getElementById("sonuc");
+</script>
+
+</body>
+</html>

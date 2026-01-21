@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Eu-iç Ürün Hesaplayıcı</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    padding: 20px;
+}
+.panel {
+    background: #fff;
+    padding: 20px;
+    max-width: 420px;
+    margin: auto;
+    border-radius: 8px;
+}
+h2 {
+    text-align: center;
+}
+label {
+    display: block;
+    margin-top: 12px;
+    font-weight: bold;
+}
+input, select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+}
+button {
+    margin-top: 15px;
+    padding: 10px;
+    width: 100%;
+    font-size: 16px;
+    cursor: pointer;
+}
+.result {
+    margin-top: 15px;
+    background: #eee;
+    padding: 10px;
+    border-radius: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+    <h2>Geçmeli Ürün Hesaplayıcı</h2>
+
+    <label>Hesaplama Türü</label>
+    <select id="mod">
+        <option value="kalinlik">Alt Parça Kalınlığını Hesapla</option>
+        <option value="eu">Alt Parça EU Ölçüsünü Hesapla</option>
+    </select>
+
+    <label>Üst Parça EU Ölçüsü</label>
+    <input type="number" id="ustEu" step="any">
+
+    <div id="altEuAlan">
+        <label>Alt Parça EU Ölçüsü</label>
+        <input type="number" id="altEu" step="any">
+    </div>
+
+    <div id="kalinlikAlan" style="display:none;">
+        <label>Alt Parça Kalınlığı (tek taraf, mm)</label>
+        <input type="number" id="kalinlik" step="any">
+    </div>
+
+    <button onclick="hesapla()">Hesapla</button>
+
+    <div class="result" id="sonuc"></div>
+</div>
+
+<script>
+document.getElementById("mod").addEventListener("change", function () {
+    const mod = this.value;
+    document.getElementById("altEuAlan").style.display = mod === "kalinlik" ? "block" : "none";
+    document.getElementById("kalinlikAlan").style.display = mod === "eu" ? "block" : "none";
+});
+
+function hesapla() {
+    const mod = document.getElementById("mod").value;
+    const ustEu = parseFloat(document.getElementById("ustEu").value);
+
+    if (isNaN(ustEu)) {
+        document.getElementById("sonuc").innerHTML = "Üst parça EU ölçüsünü girin.";
+        return;
+    }
+
+    let sonuc = "";
+
+    if (mod === "kalinlik") {
+        const altEu = parseFloat(document.getElementById("altEu").value);
+        if (isNaN(altEu)) {
+            document.getElementById("sonuc").innerHTML = "Alt parça EU ölçüsünü girin.";
+            return;
+        }
+
+        const kalinlik = (ustEu - altEu) / (2 * Math.PI);
+        sonuc = `Alt Parça Kalınlığı (tek taraf): ${kalinlik} mm`;
+
+    } else {
+        const kalinlik = parseFloat(document.getElementById("kalinlik").value);
+        if (isNaN(kalinlik)) {
+            document.getElementById("sonuc").innerHTML = "Alt parça kalınlığını girin.";
+            return;
+        }
+
+        const altEu = ustEu - (2 * kalinlik * Math.PI);
+        sonuc = `Alt Parça EU Ölçüsü: ${altEu}`;
+    }
+
+    document.getElementById("sonuc").innerHTML = sonuc;
+}
+</script>
+
+</body>
+</html>
