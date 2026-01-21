@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+
+<title>OB – Entegre Alyans Sistemleri</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#f2f2f2;
+}
+
+header{
+  background:#000;
+  color:#fff;
+  padding:14px 10px 10px;
+  text-align:center;
+}
+
+header img{
+  max-width:120px;
+  margin-bottom:6px;
+}
+
+header .title{
+  font-size:16px;
+  letter-spacing:1px;
+}
+
+nav{
+  background:#fff;
+  padding:10px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+nav button{
+  padding:14px;
+  font-size:15px;
+  border:none;
+  border-radius:8px;
+  background:#000;
+  color:#fff;
+  cursor:pointer;
+}
+
+nav button:active{
+  transform:scale(0.97);
+}
+
+iframe{
+  width:100%;
+  height:calc(100vh - 300px);
+  border:none;
+  background:#fff;
+}
+
+footer{
+  background:#000;
+  color:#fff;
+  text-align:center;
+  padding:12px 8px;
+  font-size:12px;
+  line-height:1.6;
+}
+
+/* ===== OB – Ana Ekran Güvenli CSS Dokunuşları ===== */
+
+/* Header düzeni */
+header {
+  text-align: center;
+  padding: 16px 0;
+}
+
+header img {
+  display: block;
+  margin: 0 auto 6px;
+  max-width: 120px;
+}
+
+/* Başlık yazısı */
+header h1,
+header h2 {
+  margin: 0;
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+}
+
+/* Kartlar */
+.card {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #000;
+  color: #fff;
+
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #222;
+
+  font-weight: 500;
+  letter-spacing: 0.3px;
+
+  transition: transform 0.08s ease;
+}
+
+/* Basma hissi (mobil) */
+.card:active {
+  transform: scale(0.98);
+}
+
+/* Kart grid boşlukları */
+.card-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Tek kalan kart (alt satır) */
+.card.full {
+  grid-column: span 2;
+}
+
+/* Footer */
+footer {
+  margin-top: 24px;
+  padding-bottom: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #777;
+}
+
+/* Link sıfırlama */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ===== Kart Basılma Hissi ===== */
+.card {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+}
+
+.card:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+/* ===== Aktif Modül (Seçili Kart) ===== */
+.card.active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.6);
+  background: linear-gradient(145deg, #111, #000);
+  border: 1px solid #444;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <img src="logo.png" alt="OB Logo">
+  <div class="title">Entegre Alyans Sistemleri</div>
+</header>
+
+<nav>
+  <button onclick="loadPage('gram.html')">Gram Hesap</button>
+  <button onclick="loadPage('Kalem1.4.html')">Kalem 1.4</button>
+  <button onclick="loadPage('Kasahsp.html')">Kasa Hesap</button>
+  <button onclick="loadPage('Radiüsçalışanv1.3.html')">Radiüs</button>
+  <button onclick="loadPage('Gecmealt.html')">
+  Geçme Alt
+</button>
+</nav>
+
+<iframe id="content"></iframe>
+
+<footer>
+  İzinsiz kopyalanamaz<br>
+  OB Soft<br>
+  <a href="mailto:oguzbkt@gmail.com" style="color:#fff;text-decoration:none;">
+    oguzbkt@gmail.com
+  </a>
+</footer>
+
+<script>
+function loadPage(page){
+  document.getElementById("content").src = page;
+}
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+
+<script>
+document.querySelectorAll(".card").forEach(card => {
+  card.addEventListener("click", () => {
+    document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+    card.classList.add("active");
+  });
+});
+</script>
+
+</script>
+</body>
+</html>
