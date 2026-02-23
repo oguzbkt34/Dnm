@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>İsim Kolye Pro V3</title>
+
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/paper@0.12.15/dist/paper-full.min.js"></script>
+
+<style>
+body { font-family: Arial; padding:20px; }
+input { padding:6px; margin:5px; }
+button { padding:8px 12px; margin:5px; }
+#preview { border:1px solid #aaa; margin-top:20px; }
+.warning { color:red; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<h2>Profesyonel İsim Kolye Motoru</h2>
+
+<label>İsim:</label>
+<input type="text" id="nameInput" value="Elif">
+
+<label>Yükseklik (mm):</label>
+<input type="number" id="heightInput" value="12">
+
+<label>Min Gövde (mm):</label>
+<input type="number" id="minThickness" value="1">
+
+<label>
+<input type="checkbox" id="addRing"> Askı Halkası
+</label>
+
+<br>
+
+<button onclick="generate()">Oluştur</button>
+<button onclick="download()">SVG İndir</button>
+
+<div class="warning" id="warning"></div>
+<div id="preview"></div>
+
+<canvas id="canvas" resize style="display:none;"></canvas>
+
+<script>
+
+paper.setup('canvas');
+
+let font;
+
+opentype.load('https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.ttf', function(err, f) {
+    if (!err) font = f;
+});
+
+function generate(){
+
+  if(!font){
+    alert("Font yükleniyor...");
+    return;
+  }
+
+  paper.project.clear();
+
+  const name = document.getElementById("nameInput").value;
+  const height = parseFloat(document.getElementById("heightInput").value);
+  const minThickness = parseFloat(document.getElementById("minThickness").value);
+  const addRing = document.getElementById("addRing").checked;
+
+  const fontSize = height * 3;
+  const pathData = font.getPath(name, 0, fontSize, fontSize).toPathData();
+
+  let compound = new paper.CompoundPath(pathData);
+  compound.fillColor = 'black';
+
+  compound.scale(0.01); // mm ölçek normalize
+
+  // Boolean union (harfleri gerçekten birleştirir)
+  let united = compound.unite(compound);
+  united.fillColor = 'black';
+
+  // Askı halkası
+  if(addRing){
+      let ring = new paper.Path.Circle({
+          center: new paper.Point(united.bounds.left - height, united.bounds.top + height/2),
+          radius: height/3,
+          fillColor: 'black'
+      });
+
+      united = united.unite(ring);
+  }
+
+  paper.view.update();
+
+  // SVG export
+  const svg = paper.project.exportSVG({asString:true});
+  document.getElementById("preview").innerHTML = svg;
+  window.currentSVG = svg;
+
+  // Basit kalınlık uyarısı (ileri analiz sonraki adım)
+  if(minThickness < 0.8){
+    warning.innerHTML = "UYARI: 0.8mm altı kırılma riski.";
+  } else {
+    warning.innerHTML = "";
+  }
+}
+
+function download(){
+  const blob = new Blob([window.currentSVG], {type:"image/svg+xml"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "isim-kolye-pro.svg";
+  a.click();
+}
+
+</script>
+</body>
+</html>
